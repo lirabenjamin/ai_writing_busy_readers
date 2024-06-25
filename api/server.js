@@ -37,6 +37,7 @@ app.post('/rewrite-email', async (req, res) => {
     const prompt = `Rewrite the following email to make it more professional and concise:\n\n${inputEmail}\n\nRewritten email:`;
 
     try {
+        console.log('Sending request to OpenAI API');
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -53,7 +54,8 @@ app.post('/rewrite-email', async (req, res) => {
         });
 
         if (!response.ok) {
-            throw new Error(`OpenAI API error: ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
         const data = await response.json();
@@ -66,7 +68,7 @@ app.post('/rewrite-email', async (req, res) => {
         console.log('Email rewritten and saved to database');
         res.json({ rewrittenEmail });
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error occurred:', error);
         res.status(500).json({ error: 'An error occurred while rewriting the email. Please try again.' });
     }
 });
