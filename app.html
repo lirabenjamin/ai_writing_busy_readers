@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Rewriter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-size: 14px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1000px;
+            width: 100%;
+        }
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        textarea {
+            height: 300px;
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .word-count {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+        #outputContainer {
+            position: relative;
+        }
+        #copyOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(76, 175, 80, 0.8);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="column">
+            <div id="inputWordCount" class="word-count">Word count: 0</div>
+            <textarea id="inputEmail" placeholder="Paste your email here"></textarea>
+            <button onclick="rewriteEmail()">Re-write</button>
+        </div>
+        <div class="column">
+            <div id="outputWordCount" class="word-count">Word count: 0</div>
+            <div id="outputContainer">
+                <textarea id="outputEmail" readonly></textarea>
+                <div id="copyOverlay">Click to copy</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function countWords(text) {
+            return text.trim().split(/\s+/).length;
+        }
+
+        function updateWordCount(inputId, countId) {
+            const text = document.getElementById(inputId).value;
+            const wordCount = countWords(text);
+            document.getElementById(countId).textContent = `Word count: ${wordCount}`;
+        }
+
+        document.getElementById('inputEmail').addEventListener('input', () => updateWordCount('inputEmail', 'inputWordCount'));
+
+        async function rewriteEmail() {
+            const inputEmail = document.getElementById('inputEmail').value;
+
+            try {
+                const response = await fetch('https://your-backend-url/rewrite-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ inputEmail })
+                });
+
+                const data = await response.json();
+                const rewrittenEmail = data.rewrittenEmail;
+
+                document.getElementById('outputEmail').value = rewrittenEmail;
+                updateWordCount('outputEmail', 'outputWordCount');
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('outputEmail').value = 'An error occurred while rewriting the email. Please try again.';
+            }
+        }
+
+        const outputContainer = document.getElementById('outputContainer');
+        const copyOverlay = document.getElementById('copyOverlay');
+        const outputEmail = document.getElementById('outputEmail');
+
+        outputContainer.addEventListener('mouseenter', () => {
+            copyOverlay.style.opacity = '1';
+        });
+
+        outputContainer.addEventListener('mouseleave', () => {
+            copyOverlay.style.opacity = '0';
+        });
+
+        outputContainer.addEventListener('click', () => {
+            outputEmail.select();
+            document.execCommand('copy');
+            copyOverlay.textContent = 'Copied!';
+            setTimeout(() => {
+                copyOverlay.textContent = 'Click to copy';
+            }, 1500);
+        });
+    </script>
+</body>
+</html>
