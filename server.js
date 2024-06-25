@@ -13,7 +13,9 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 // Define a schema and model for emails
 const emailSchema = new mongoose.Schema({
@@ -25,6 +27,7 @@ const emailSchema = new mongoose.Schema({
 const Email = mongoose.model('Email', emailSchema);
 
 app.post('/rewrite-email', async (req, res) => {
+    console.log('Received request to rewrite email');
     const inputEmail = req.body.inputEmail;
     const prompt = `Rewrite the following email to make it more professional and concise:\n\n${inputEmail}\n\nRewritten email:`;
 
@@ -44,6 +47,10 @@ app.post('/rewrite-email', async (req, res) => {
             })
         });
 
+        if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.statusText}`);
+        }
+
         const data = await response.json();
         const rewrittenEmail = data.choices[0].message.content.trim();
 
@@ -51,6 +58,7 @@ app.post('/rewrite-email', async (req, res) => {
         const newEmail = new Email({ inputEmail, rewrittenEmail });
         await newEmail.save();
 
+        console.log('Email rewritten and saved to database');
         res.json({ rewrittenEmail });
     } catch (error) {
         console.error('Error:', error);
