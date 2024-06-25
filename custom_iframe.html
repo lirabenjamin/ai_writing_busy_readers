@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Custom Iframe</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+        }
+        iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="targetIframe" src="https://writingforbusyreaders.com/ai"></iframe>
+
+    <script>
+        window.onload = function() {
+            var iframe = document.getElementById('targetIframe');
+            iframe.onload = function() {
+                // Disable popup and scroll to the desired section
+                iframe.contentWindow.document.querySelector('#popupElement').style.display = 'none'; // Adjust this selector to match the popup element
+                iframe.contentWindow.scrollTo(0, document.querySelector('.et_pb_row.et_pb_row_3').offsetTop); // Adjust this selector to match the desired div
+            };
+        };
+    </script>
+</body>
+</html>
