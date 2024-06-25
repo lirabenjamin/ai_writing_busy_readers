@@ -21,14 +21,24 @@
     <iframe id="targetIframe" src="https://writingforbusyreaders.com/ai"></iframe>
 
     <script>
-        window.onload = function() {
+        document.addEventListener('DOMContentLoaded', function() {
             var iframe = document.getElementById('targetIframe');
             iframe.onload = function() {
-                // Disable popup and scroll to the desired section
-                iframe.contentWindow.document.querySelector('#popupElement').style.display = 'none'; // Adjust this selector to match the popup element
-                iframe.contentWindow.scrollTo(0, document.querySelector('.et_pb_row.et_pb_row_3').offsetTop); // Adjust this selector to match the desired div
+                var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+                // Disable the popup
+                var popup = iframeDocument.querySelector('.et_pb_row.et_pb_row_0.et_pb_equal_columns.et_pb_gutters1');
+                if (popup) {
+                    popup.style.display = 'none';
+                }
+
+                // Scroll to the desired section
+                var targetSection = iframeDocument.querySelector('.et_pb_row.et_pb_row_3');
+                if (targetSection) {
+                    targetSection.scrollIntoView();
+                }
             };
-        };
+        });
     </script>
 </body>
 </html>
