@@ -95,7 +95,7 @@
         <!-- : '/api/rewrite-email';  -->
         <!-- const backendUrl = 'http://localhost:3000/api/rewrite-email'; -->
         const backendUrl = '/api/rewrite-email';
-
+        
         function countWords(text) {
             return text.trim().split(/\s+/).length;
         }
@@ -111,6 +111,9 @@
         async function rewriteEmail() {
             const inputEmail = document.getElementById('inputEmail').value;
 
+            const outputEmail = document.getElementById('outputEmail');
+            outputEmail.value = ''; // Clear previous content
+
             try {
                 const response = await fetch(backendUrl, {
                     method: 'POST',
@@ -120,18 +123,36 @@
                     body: JSON.stringify({ inputEmail })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.statusText}`);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let result = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (let line of lines) {
+                        if (line.trim().startsWith('data: ')) {
+                            const data = line.replace(/^data: /, '');
+                            if (data === '[DONE]') break;
+                            try {
+                                const json = JSON.parse(data);
+                                if (json.choices && json.choices[0] && json.choices[0].delta) {
+                                    result += json.choices[0].delta.content || '';
+                                    outputEmail.value = result;
+                                    updateWordCount('outputEmail', 'outputWordCount');
+                                }
+                            } catch (e) {
+                                console.error('Error parsing JSON', e);
+                            }
+                        }
+                    }
                 }
-
-                const data = await response.json();
-                const rewrittenEmail = data.rewrittenEmail;
-
-                document.getElementById('outputEmail').value = rewrittenEmail;
-                updateWordCount('outputEmail', 'outputWordCount');
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('outputEmail').value = 'An error occurred while rewriting the email. Please try again.';
+                outputEmail.value = 'An error occurred while rewriting the email. Please try again.';
             }
         }
 

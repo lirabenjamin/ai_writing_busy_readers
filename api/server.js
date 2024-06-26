@@ -45,6 +45,7 @@ app.post('/api/rewrite-email', async (req, res) => {
             },
             body: JSON.stringify({
                 model: "gpt-3.5-turbo",
+                stream: true,
                 messages: [
                     {"role": "system", "content": "You are a professional email editor."},
                     {"role": "user", "content": prompt}
@@ -57,15 +58,41 @@ app.post('/api/rewrite-email', async (req, res) => {
             throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
-        const data = await response.json();
-        const rewrittenEmail = data.choices[0].message.content.trim();
+        res.setHeader('Content-Type', 'text/plain');
+
+        let rewrittenEmail = '';
+        const decoder = new TextDecoder();
+
+        for await (const chunk of response.body) {
+            const text = decoder.decode(chunk, { stream: true });
+            const lines = text.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.replace(/^data: /, '');
+                    if (data === '[DONE]') break;
+
+                    try {
+                        const json = JSON.parse(data);
+                        if (json.choices && json.choices[0] && json.choices[0].delta) {
+                            rewrittenEmail += json.choices[0].delta.content || '';
+                        }
+                    } catch (e) {
+                        console.error('Error parsing JSON', e);
+                    }
+                }
+            }
+
+            res.write(text);  // Send the chunk to the client
+        }
+
 
         // Save the input and output to the database
         const newEmail = new Email({ inputEmail, rewrittenEmail });
         await newEmail.save();
 
         console.log('Email rewritten and saved to database');
-        res.json({ rewrittenEmail });
+        res.end();  // End the response stream
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ error: 'An error occurred while rewriting the email. Please try again.' });
