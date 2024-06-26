@@ -34,7 +34,7 @@ const Email = mongoose.model('Email', emailSchema);
 
 app.post('/api/rewrite-email', async (req, res) => {
     console.log('Received request to rewrite email');
-    const inputEmail = req.body.inputEmail;
+    const { inputEmail } = req.body;
     const userId = req.query.userid;
     if (!userId) {
         return res.status(400).json({ error: 'User ID is required' });
