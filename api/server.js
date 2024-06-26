@@ -24,14 +24,9 @@ const emailSchema = new mongoose.Schema({
 
 const Email = mongoose.model('Email', emailSchema);
 
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-
-export default async function handler(req, res) {
-  console.log(`Received ${req.method} request`);
-  
-  if (req.method === 'POST') {
-    console.log('Processing POST request');
-    const { inputEmail } = req.body;
+app.post('/api/rewrite-email', async (req, res) => {
+    console.log('Received request to rewrite email');
+    const inputEmail = req.body.inputEmail;
     const userId = req.query.userid;
 
     if (!userId) {
