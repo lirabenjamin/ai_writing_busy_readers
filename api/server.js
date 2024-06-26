@@ -1,128 +1,110 @@
+const express = require('express');
+const fetch = require('node-fetch');
+const cors = require('cors');
 const mongoose = require('mongoose');
-const { OpenAI } = require('openai');
 require('dotenv').config();
 
+const app = express();
+const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MONGODB_URI = process.env.MONGODB_URI;
 
-console.log('Server script started');
+app.use(cors());
+app.use(express.json());
 
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+// Connect to MongoDB
+mongoose.connect(MONGODB_URI, { 
+    useNewUrlParser: true, 
+    useUnifiedTopology: true,
+    useCreateIndex: true,
+    useFindAndModify: false
 })
-.then(() => console.log('MongoDB connected successfully'))
-.catch(err => console.error('MongoDB connection error:', err));
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => console.error('MongoDB connection error:', err));
 
+// Define a schema and model for emails
 const emailSchema = new mongoose.Schema({
-  userId: String,
-  inputEmail: String,
-  rewrittenEmail: String,
-  status: String,
-  createdAt: { type: Date, default: Date.now }
+    userId: String,
+    inputEmail: String,
+    rewrittenEmail: String,
+    createdAt: { type: Date, default: Date.now }
 });
 
 const Email = mongoose.model('Email', emailSchema);
 
 app.post('/api/rewrite-email', async (req, res) => {
     console.log('Received request to rewrite email');
-    const inputEmail = req.body.inputEmail;
+    const { inputEmail } = req.body;
     const userId = req.query.userid;
-
     if (!userId) {
-      console.error('User ID is missing');
-      return res.status(400).json({ error: 'User ID is required' });
+        return res.status(400).json({ error: 'User ID is required' });
     }
+
+    const prompt = `Rewrite the following email to make it more professional and concise:\n\n${inputEmail}\n\nRewritten email:`;
 
     try {
-      const newEmail = new Email({
-        userId,
-        inputEmail,
-        rewrittenEmail: '',
-        status: 'processing'
-      });
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "gpt-3.5-turbo",
+                stream: true,
+                messages: [
+                    {"role": "system", "content": "You are a professional email editor."},
+                    {"role": "user", "content": prompt}
+                ]
+            })
+        });
 
-      await newEmail.save();
-      console.log('New email document created:', newEmail._id);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
 
-      // Start the email rewriting process
-      rewriteEmailInBackground(newEmail._id, inputEmail);
+        res.setHeader('Content-Type', 'text/plain');
 
-      return res.status(202).json({ id: newEmail._id, message: 'Email rewriting started' });
+        let rewrittenEmail = '';
+        const decoder = new TextDecoder();
+
+        for await (const chunk of response.body) {
+            const text = decoder.decode(chunk, { stream: true });
+            const lines = text.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.replace(/^data: /, '');
+                    if (data === '[DONE]') break;
+
+                    try {
+                        const json = JSON.parse(data);
+                        if (json.choices && json.choices[0] && json.choices[0].delta) {
+                            rewrittenEmail += json.choices[0].delta.content || '';
+                        }
+                    } catch (e) {
+                        console.error('Error parsing JSON', e);
+                    }
+                }
+            }
+
+            res.write(text);  // Send the chunk to the client
+        }
+
+
+        // Save the input and output to the database
+        const newEmail = new Email({ userId, inputEmail, rewrittenEmail });
+        await newEmail.save();
+
+        console.log('Email rewritten and saved to database');
+        res.end();  // End the response stream
     } catch (error) {
-      console.error('Error in POST request:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+        console.error('Error:', error);
+        res.status(500).json({ error: 'An error occurred while rewriting the email. Please try again.' });
     }
-  } else if (req.method === 'GET') {
-    console.log('Processing GET request');
-    const { id } = req.query;
+});
 
-    if (!id) {
-      console.error('Email ID is missing');
-      return res.status(400).json({ error: 'Email ID is required' });
-    }
-
-    try {
-      const email = await Email.findById(id);
-
-      if (!email) {
-        console.error('Email not found:', id);
-        return res.status(404).json({ error: 'Email not found' });
-      }
-
-      console.log('Returning email status:', email.status);
-      return res.status(200).json({
-        status: email.status,
-        rewrittenEmail: email.rewrittenEmail
-      });
-    } catch (error) {
-      console.error('Error in GET request:', error);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-  } else {
-    console.error('Method not allowed:', req.method);
-    res.setHeader('Allow', ['POST', 'GET']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
-  }
-}
-
-async function rewriteEmailInBackground(emailId, inputEmail) {
-  console.log('Starting background email rewriting for:', emailId);
-  const prompt = `Rewrite the following email to make it more professional and concise:\n\n${inputEmail}\n\nRewritten email:`;
-
-  try {
-    const stream = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {"role": "system", "content": "You are a professional email editor."},
-        {"role": "user", "content": prompt}
-      ],
-      stream: true,
-    });
-
-    let rewrittenEmail = '';
-
-    for await (const chunk of stream) {
-      rewrittenEmail += chunk.choices[0]?.delta?.content || '';
-      
-      // Update the database with the current progress
-      await Email.findByIdAndUpdate(emailId, {
-        rewrittenEmail: rewrittenEmail,
-        status: 'processing'
-      });
-    }
-
-    // Update the database with the final result
-    await Email.findByIdAndUpdate(emailId, {
-      rewrittenEmail: rewrittenEmail,
-      status: 'completed'
-    });
-    console.log('Email rewriting completed for:', emailId);
-
-  } catch (error) {
-    console.error('Error in rewriteEmailInBackground:', error);
-    await Email.findByIdAndUpdate(emailId, { status: 'error' });
-  }
-}
-
-console.log('Server script finished loading');
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
