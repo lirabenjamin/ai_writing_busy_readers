@@ -1,7 +1,7 @@
 // firebase.js
 var admin = require("firebase-admin");
 
-var serviceAccount = require("ai-writing-busy-readers-firebase-key.json");
+var serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
