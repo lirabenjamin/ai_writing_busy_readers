@@ -3,6 +3,8 @@ const fetch = require('node-fetch');
 const cors = require('cors');
 const mongoose = require('mongoose');
 require('dotenv').config();
+const fs = require('fs').promises;
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,6 +34,17 @@ const emailSchema = new mongoose.Schema({
 
 const Email = mongoose.model('Email', emailSchema);
 
+async function readPromptFromFile(filename) {
+    try {
+      const filePath = path.join(__dirname, filename);
+      const data = await fs.readFile(filePath, 'utf8');
+      return data.trim();
+    } catch (error) {
+      console.error('Error reading prompt file:', error);
+      return null;
+    }
+  }
+
 app.post('/api/rewrite-email', async (req, res) => {
     console.log('Received request to rewrite email');
     const { inputEmail } = req.body;
@@ -43,6 +56,11 @@ app.post('/api/rewrite-email', async (req, res) => {
     const prompt = `Rewrite the following email to make it more professional and concise:\n\n${inputEmail}\n\nRewritten email:`;
 
     try {
+        const basePrompt = await readPromptFromFile('prompt.txt');
+        if (!basePrompt) {
+            throw new Error('Failed to read prompt from file');
+        }
+
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -53,7 +71,7 @@ app.post('/api/rewrite-email', async (req, res) => {
                 model: "gpt-3.5-turbo",
                 stream: true,
                 messages: [
-                    {"role": "system", "content": "You are a professional email editor."},
+                    {"role": "system", "content": basePrompt},
                     {"role": "user", "content": prompt}
                 ]
             })
