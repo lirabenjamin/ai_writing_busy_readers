@@ -95,6 +95,11 @@
         <!-- : '/api/rewrite-email';  -->
         <!-- const backendUrl = 'http://localhost:3000/api/rewrite-email'; -->
         const backendUrl = '/api/rewrite-email';
+
+        function getUserId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('userid');
+        }
         
         function countWords(text) {
             return text.trim().split(/\s+/).length;
@@ -111,11 +116,18 @@
         async function rewriteEmail() {
             const inputEmail = document.getElementById('inputEmail').value;
 
+            const userId = getUserId();
+            if (!userId) {
+                alert('User ID is required');
+                return;
+            }
+
+
             const outputEmail = document.getElementById('outputEmail');
             outputEmail.value = ''; // Clear previous content
 
             try {
-                const response = await fetch(backendUrl, {
+                const response = await fetch(`${backendUrl}?userid=${userId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
