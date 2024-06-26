@@ -92,10 +92,14 @@ app.post('/api/rewrite-email', async (req, res) => {
             res.write(text);  // Send the chunk to the client
         }
 
-
         // Save the input and output to the database
-        const newEmail = new Email({ userId, inputEmail, rewrittenEmail });
-        await newEmail.save();
+        try {
+            const newEmail = new Email({ userId, inputEmail, rewrittenEmail });
+            await newEmail.save();
+            console.log('Email saved to database:', newEmail);
+        } catch (saveError) {
+            console.error('Error saving to database:', saveError);
+        }
 
         console.log('Email rewritten and saved to database');
         res.end();  // End the response stream
