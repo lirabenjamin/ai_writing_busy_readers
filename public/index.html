@@ -93,8 +93,8 @@
         <!-- const backendUrl = window.location.hostname === 'localhost' -->
         <!-- ? 'http://localhost:3000/api/rewrite-email' -->
         <!-- : '/api/rewrite-email';  -->
-        <!-- const backendUrl = 'http://localhost:3000/api/rewrite-email'; -->
-        const backendUrl = '/api/rewrite-email';
+        const backendUrl = 'http://localhost:3000/api/rewrite-email';
+        <!-- const backendUrl = '/api/rewrite-email'; -->
 
         function getUserId() {
             const params = new URLSearchParams(window.location.search);
@@ -116,10 +116,9 @@
         async function rewriteEmail() {
             const inputEmail = document.getElementById('inputEmail').value;
 
-            const userId = getUserId();
+            let userId = getUserId();
             if (!userId) {
-                alert('User ID is required');
-                return;
+                userId = '999';
             }
 
 
