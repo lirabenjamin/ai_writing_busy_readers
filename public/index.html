@@ -90,8 +90,11 @@
     </div>
 
     <script>
+        <!-- const backendUrl = window.location.hostname === 'localhost' -->
+        <!-- ? 'http://localhost:3000/api/rewrite-email' -->
+        <!-- : '/api/rewrite-email';  -->
+        <!-- const backendUrl = 'http://localhost:3000/api/rewrite-email'; -->
         const backendUrl = '/api/rewrite-email';
-
 
         function countWords(text) {
             return text.trim().split(/\s+/).length;
