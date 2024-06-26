@@ -24,6 +24,7 @@ mongoose.connect(MONGODB_URI, {
 
 // Define a schema and model for emails
 const emailSchema = new mongoose.Schema({
+    userId: String,
     inputEmail: String,
     rewrittenEmail: String,
     createdAt: { type: Date, default: Date.now }
@@ -34,6 +35,11 @@ const Email = mongoose.model('Email', emailSchema);
 app.post('/api/rewrite-email', async (req, res) => {
     console.log('Received request to rewrite email');
     const inputEmail = req.body.inputEmail;
+    const userId = req.query.userid;
+    if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+    }
+
     const prompt = `Rewrite the following email to make it more professional and concise:\n\n${inputEmail}\n\nRewritten email:`;
 
     try {
@@ -88,7 +94,7 @@ app.post('/api/rewrite-email', async (req, res) => {
 
 
         // Save the input and output to the database
-        const newEmail = new Email({ inputEmail, rewrittenEmail });
+        const newEmail = new Email({ userId, inputEmail, rewrittenEmail });
         await newEmail.save();
 
         console.log('Email rewritten and saved to database');
