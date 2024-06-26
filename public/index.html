@@ -1,21 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- ... (previous head content remains the same) ... -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Rewriter</title>
+    <style>
+        /* ... (previous styles remain the same) ... */
+    </style>
 </head>
 <body>
-    <!-- ... (previous body content remains the same) ... -->
+    <div class="container">
+        <div class="column">
+            <div id="inputWordCount" class="word-count">Word count: 0</div>
+            <textarea id="inputEmail" placeholder="Paste your email here"></textarea>
+            <button onclick="rewriteEmail()">Re-write</button>
+        </div>
+        <div class="column">
+            <div id="outputWordCount" class="word-count">Word count: 0</div>
+            <div id="outputContainer">
+                <textarea id="outputEmail" readonly></textarea>
+                <div id="copyOverlay">Click to copy</div>
+            </div>
+        </div>
+    </div>
+    <div id="errorLog" style="color: red; margin-top: 20px;"></div>
 
     <script>
+        console.log('Script started');
         const backendUrl = '/api/rewrite-email';
 
-        // ... (previous JavaScript functions remain the same) ...
+        function getUserId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('userid');
+        }
+        
+        function countWords(text) {
+            return text.trim().split(/\s+/).length;
+        }
+
+        function updateWordCount(inputId, countId) {
+            const text = document.getElementById(inputId).value;
+            const wordCount = countWords(text);
+            document.getElementById(countId).textContent = `Word count: ${wordCount}`;
+        }
+
+        document.getElementById('inputEmail').addEventListener('input', () => updateWordCount('inputEmail', 'inputWordCount'));
 
         async function rewriteEmail() {
+            console.log('rewriteEmail function called');
             const inputEmail = document.getElementById('inputEmail').value;
             const userId = getUserId();
             if (!userId) {
-                alert('User ID is required');
+                logError('User ID is required');
                 return;
             }
 
@@ -23,6 +59,7 @@
             outputEmail.value = ''; // Clear previous content
 
             try {
+                console.log('Sending POST request to', backendUrl);
                 const response = await fetch(`${backendUrl}?userid=${userId}`, {
                     method: 'POST',
                     headers: {
@@ -31,7 +68,12 @@
                     body: JSON.stringify({ inputEmail })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
+                console.log('Received response:', data);
                 if (data.id) {
                     pollEmailStatus(data.id);
                 } else {
@@ -39,25 +81,31 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
+                logError(`Error: ${error.message}`);
                 outputEmail.value = 'An error occurred while rewriting the email. Please try again.';
             }
         }
 
         async function pollEmailStatus(emailId) {
+            console.log('pollEmailStatus function called with id:', emailId);
             const outputEmail = document.getElementById('outputEmail');
             
             while (true) {
                 try {
+                    console.log('Sending GET request to', backendUrl);
                     const response = await fetch(`${backendUrl}?id=${emailId}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     const data = await response.json();
+                    console.log('Received status:', data);
 
                     if (data.status === 'completed') {
                         outputEmail.value = data.rewrittenEmail;
                         updateWordCount('outputEmail', 'outputWordCount');
                         break;
                     } else if (data.status === 'error') {
-                        outputEmail.value = 'An error occurred while rewriting the email. Please try again.';
-                        break;
+                        throw new Error('Server reported an error in email rewriting');
                     } else {
                         outputEmail.value = data.rewrittenEmail + '...';
                         updateWordCount('outputEmail', 'outputWordCount');
@@ -67,13 +115,20 @@
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 } catch (error) {
                     console.error('Error:', error);
+                    logError(`Error while polling: ${error.message}`);
                     outputEmail.value = 'An error occurred while fetching the rewritten email. Please try again.';
                     break;
                 }
             }
         }
 
-        // ... (remaining JavaScript code stays the same) ...
+        function logError(message) {
+            console.error(message);
+            const errorLog = document.getElementById('errorLog');
+            errorLog.textContent += message + '\n';
+        }
+
+        console.log('Script finished loading');
     </script>
 </body>
 </html>
