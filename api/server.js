@@ -1,35 +1,35 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
-const mongoose = require('mongoose');
+const db = require('./firebase'); // Import Firestore configuration
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MONGO_URI = process.env.MONGO_URI;
+// const MONGO_URI = process.env.MONGO_URI;
 
 app.use(cors());
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(MONGO_URI, { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true,
-    useCreateIndex: true,
-    useFindAndModify: false
-})
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// // Connect to MongoDB
+// mongoose.connect(MONGO_URI, { 
+//     useNewUrlParser: true, 
+//     useUnifiedTopology: true,
+//     useCreateIndex: true,
+//     useFindAndModify: false
+// })
+//   .then(() => console.log('MongoDB connected'))
+//   .catch(err => console.error('MongoDB connection error:', err));
 
-// Define a schema and model for emails
-const emailSchema = new mongoose.Schema({
-    inputEmail: String,
-    rewrittenEmail: String,
-    createdAt: { type: Date, default: Date.now }
-});
+// // Define a schema and model for emails
+// const emailSchema = new mongoose.Schema({
+//     inputEmail: String,
+//     rewrittenEmail: String,
+//     createdAt: { type: Date, default: Date.now }
+// });
 
-const Email = mongoose.model('Email', emailSchema);
+// const Email = mongoose.model('Email', emailSchema);
 
 app.post('/rewrite-email', async (req, res) => {
     console.log('Received request to rewrite email');
@@ -61,9 +61,16 @@ app.post('/rewrite-email', async (req, res) => {
         const data = await response.json();
         const rewrittenEmail = data.choices[0].message.content.trim();
 
-        // Save the input and output to the database
-        const newEmail = new Email({ inputEmail, rewrittenEmail });
-        await newEmail.save();
+        // // Save the input and output to the database
+        // const newEmail = new Email({ inputEmail, rewrittenEmail });
+        // await newEmail.save();
+
+        // Save the input and output to Firestore
+        await db.collection('emails').add({
+            inputEmail,
+            rewrittenEmail,
+            createdAt: new Date()
+        });
 
         console.log('Email rewritten and saved to database');
         res.json({ rewrittenEmail });
