@@ -125,6 +125,11 @@
             const params = new URLSearchParams(window.location.search);
             return params.get('userid');
         }
+
+        function getDisable() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('disable_copy_paste');
+        }
         
         function countWords(text) {
             return text.trim().split(/\s+/).length;
@@ -201,22 +206,37 @@
         const copyOverlay = document.getElementById('copyOverlay');
         const outputEmail = document.getElementById('outputEmail');
 
-        outputContainer.addEventListener('mouseenter', () => {
-            copyOverlay.style.opacity = '1';
-        });
+        // Function to add click-to-copy functionality
+        function addCopyFunctionality() {
+            const outputContainer = document.getElementById('outputContainer');
+            const copyOverlay = document.getElementById('copyOverlay');
+            const outputEmail = document.getElementById('outputEmail');
 
-        outputContainer.addEventListener('mouseleave', () => {
-            copyOverlay.style.opacity = '0';
-        });
+            outputContainer.addEventListener('mouseenter', () => {
+                copyOverlay.style.opacity = '1';
+            });
 
-        outputContainer.addEventListener('click', () => {
-            outputEmail.select();
-            document.execCommand('copy');
-            copyOverlay.textContent = 'Copied!';
-            setTimeout(() => {
-                copyOverlay.textContent = 'Click to copy';
-            }, 1500);
-        });
+            outputContainer.addEventListener('mouseleave', () => {
+                copyOverlay.style.opacity = '0';
+            });
+
+            outputContainer.addEventListener('click', () => {
+                outputEmail.select();
+                document.execCommand('copy');
+                copyOverlay.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyOverlay.textContent = 'Click to copy';
+                }, 1500);
+            });
+        }
+        // Check embedded data to decide whether to add click-to-copy functionality
+        document.addEventListener('DOMContentLoaded', () => {
+        const isDisabled = getDisable();
+        if (isDisabled !== '1') {
+            addCopyFunctionality();
+        }
+    });
+
     </script>
 </body>
 </html>
