@@ -108,10 +108,11 @@
             <div id="outputContainer">
                 <textarea id="outputEmail" readonly></textarea>
                 <div id="copyOverlay">Click to copy</div>
+                <div class="spinner" id="spinner"></div> <!-- Add spinner element -->
             </div>
         </div>
     </div>
-    <div class="spinner" id="spinner"></div> <!-- Add spinner element -->
+    
 
     <script>
         <!-- const backendUrl = window.location.hostname === 'localhost' -->
@@ -191,6 +192,8 @@
             } catch (error) {
                 console.error('Error:', error);
                 outputEmail.value = 'An error occurred while rewriting the email. Please try again.';
+            }  finally {
+                spinner.style.display = 'none'; // Hide spinner when done
             }
         }
 
