@@ -108,17 +108,12 @@
             <div id="outputContainer">
                 <textarea id="outputEmail" readonly></textarea>
                 <div id="copyOverlay">Click to copy</div>
-                <div class="spinner" id="spinner"></div> <!-- Add spinner element -->
+                <div class="spinner" id="spinner"></div> <!-- Add spinner element inside outputContainer -->
             </div>
         </div>
     </div>
-    
 
     <script>
-        <!-- const backendUrl = window.location.hostname === 'localhost' -->
-        <!-- ? 'http://localhost:3000/api/rewrite-email' -->
-        <!-- : '/api/rewrite-email';  -->
-        <!-- const backendUrl = 'http://localhost:3000/api/rewrite-email'; -->
         const backendUrl = '/api/rewrite-email';
 
         function getUserId() {
@@ -146,55 +141,30 @@
                 userId = '999';
             }
 
-
             const outputEmail = document.getElementById('outputEmail');
             outputEmail.value = ''; // Clear previous content
 
             const spinner = document.getElementById('spinner');
             spinner.style.display = 'block'; // Show spinner
 
-            try {
-                const response = await fetch(`${backendUrl}?userid=${userId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ inputEmail })
-                });
+            const eventSource = new EventSource(`${backendUrl}?userid=${userId}`);
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let result = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n');
-
-                    for (let line of lines) {
-                        if (line.trim().startsWith('data: ')) {
-                            const data = line.replace(/^data: /, '');
-                            if (data === '[DONE]') break;
-                            try {
-                                const json = JSON.parse(data);
-                                if (json.choices && json.choices[0] && json.choices[0].delta) {
-                                    result += json.choices[0].delta.content || '';
-                                    outputEmail.value = result;
-                                    updateWordCount('outputEmail', 'outputWordCount');
-                                }
-                            } catch (e) {
-                                console.error('Error parsing JSON', e);
-                            }
-                        }
-                    }
+            eventSource.onmessage = (event) => {
+                if (event.data === '[DONE]') {
+                    spinner.style.display = 'none'; // Hide spinner when done
+                    eventSource.close();
+                } else {
+                    outputEmail.value += event.data;
+                    updateWordCount('outputEmail', 'outputWordCount');
                 }
-            } catch (error) {
+            };
+
+            eventSource.onerror = (error) => {
                 console.error('Error:', error);
                 outputEmail.value = 'An error occurred while rewriting the email. Please try again.';
-            }  finally {
-                spinner.style.display = 'none'; // Hide spinner when done
-            }
+                spinner.style.display = 'none'; // Hide spinner when error occurs
+                eventSource.close();
+            };
         }
 
         const outputContainer = document.getElementById('outputContainer');
