@@ -147,24 +147,50 @@
             const spinner = document.getElementById('spinner');
             spinner.style.display = 'block'; // Show spinner
 
-            const eventSource = new EventSource(`${backendUrl}?userid=${userId}`);
+            try {
+                const response = await fetch(`${backendUrl}?userid=${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ inputEmail })
+                });
 
-            eventSource.onmessage = (event) => {
-                if (event.data === '[DONE]') {
-                    spinner.style.display = 'none'; // Hide spinner when done
-                    eventSource.close();
-                } else {
-                    outputEmail.value += event.data;
-                    updateWordCount('outputEmail', 'outputWordCount');
+                if (!response.ok) {
+                    spinner.style.display = 'none'; // Hide spinner when error occurs
+                    outputEmail.value = 'An error occurred while rewriting the email. Please try again.';
+                    return;
                 }
-            };
 
-            eventSource.onerror = (error) => {
-                console.error('Error:', error);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let done = false;
+
+                while (!done) {
+                    const { value, done: streamDone } = await reader.read();
+                    done = streamDone;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (let line of lines) {
+                        if (line.trim().startsWith('data: ')) {
+                            const data = line.replace(/^data: /, '');
+                            if (data === '[DONE]') {
+                                spinner.style.display = 'none'; // Hide spinner when done
+                                return;
+                            } else {
+                                outputEmail.value += data;
+                                updateWordCount('outputEmail', 'outputWordCount');
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
                 outputEmail.value = 'An error occurred while rewriting the email. Please try again.';
                 spinner.style.display = 'none'; // Hide spinner when error occurs
-                eventSource.close();
-            };
+            }
         }
 
         const outputContainer = document.getElementById('outputContainer');
