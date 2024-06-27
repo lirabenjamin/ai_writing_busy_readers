@@ -121,6 +121,7 @@
         <!-- const backendUrl = 'http://localhost:3000/api/rewrite-email'; -->
         const backendUrl = '/api/rewrite-email';
 
+
         function getUserId() {
             const params = new URLSearchParams(window.location.search);
             return params.get('userid');
@@ -150,7 +151,6 @@
             if (!userId) {
                 userId = '999';
             }
-
 
             const outputEmail = document.getElementById('outputEmail');
             outputEmail.value = ''; // Clear previous content
@@ -202,10 +202,6 @@
             }
         }
 
-        const outputContainer = document.getElementById('outputContainer');
-        const copyOverlay = document.getElementById('copyOverlay');
-        const outputEmail = document.getElementById('outputEmail');
-
         // Function to add click-to-copy functionality
         function addCopyFunctionality() {
             const outputContainer = document.getElementById('outputContainer');
@@ -229,14 +225,14 @@
                 }, 1500);
             });
         }
+
         // Check embedded data to decide whether to add click-to-copy functionality
         document.addEventListener('DOMContentLoaded', () => {
-        const isDisabled = getDisable();
-        if (isDisabled !== '1') {
-            addCopyFunctionality();
-        }
-    });
-
+            const isDisabled = getDisable();
+            if (isDisabled !== '1') {
+                addCopyFunctionality();
+            }
+        });
     </script>
 </body>
 </html>
