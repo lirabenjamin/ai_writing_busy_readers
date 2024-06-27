@@ -71,7 +71,6 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
-        /* Spinner CSS */
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             border-left-color: #4CAF50;
@@ -87,12 +86,8 @@
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -108,7 +103,7 @@
             <div id="outputContainer">
                 <textarea id="outputEmail" readonly></textarea>
                 <div id="copyOverlay">Click to copy</div>
-                <div class="spinner" id="spinner"></div> <!-- Add spinner element inside outputContainer -->
+                <div class="spinner" id="spinner"></div>
             </div>
         </div>
     </div>
@@ -120,7 +115,7 @@
             const params = new URLSearchParams(window.location.search);
             return params.get('userid');
         }
-        
+
         function countWords(text) {
             return text.trim().split(/\s+/).length;
         }
@@ -135,7 +130,6 @@
 
         async function rewriteEmail() {
             const inputEmail = document.getElementById('inputEmail').value;
-
             let userId = getUserId();
             if (!userId) {
                 userId = '999';
@@ -143,7 +137,6 @@
 
             const outputEmail = document.getElementById('outputEmail');
             outputEmail.value = ''; // Clear previous content
-
             const spinner = document.getElementById('spinner');
             spinner.style.display = 'block'; // Show spinner
 
@@ -165,16 +158,14 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let done = false;
-                let buffer = '';
 
                 while (!done) {
                     const { value, done: streamDone } = await reader.read();
                     done = streamDone;
 
                     if (value) {
-                        buffer += decoder.decode(value, { stream: true });
-                        const lines = buffer.split('\n');
-                        buffer = lines.pop(); // Keep the last incomplete line
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n');
 
                         for (let line of lines) {
                             if (line.trim().startsWith('data: ')) {
