@@ -165,23 +165,27 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let done = false;
+                let buffer = '';
 
                 while (!done) {
                     const { value, done: streamDone } = await reader.read();
                     done = streamDone;
 
-                    const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n');
+                    if (value) {
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep the last incomplete line
 
-                    for (let line of lines) {
-                        if (line.trim().startsWith('data: ')) {
-                            const data = line.replace(/^data: /, '');
-                            if (data === '[DONE]') {
-                                spinner.style.display = 'none'; // Hide spinner when done
-                                return;
-                            } else {
-                                outputEmail.value += data;
-                                updateWordCount('outputEmail', 'outputWordCount');
+                        for (let line of lines) {
+                            if (line.trim().startsWith('data: ')) {
+                                const data = line.replace(/^data: /, '');
+                                if (data === '[DONE]') {
+                                    spinner.style.display = 'none'; // Hide spinner when done
+                                    return;
+                                } else {
+                                    outputEmail.value += data;
+                                    updateWordCount('outputEmail', 'outputWordCount');
+                                }
                             }
                         }
                     }
