@@ -69,7 +69,7 @@ app.post('/api/rewrite-email', async (req, res) => {
                 'Authorization': `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: "gpt-3.5-turbo",
+                model: "gpt-4o",
                 stream: true,
                 messages: [
                     {"role": "system", "content": basePrompt},
