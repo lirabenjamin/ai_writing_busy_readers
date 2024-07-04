@@ -103,6 +103,8 @@
             }
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.6/purify.min.js"></script>
+
 </head>
 <body>
     <div class="container">
@@ -193,7 +195,7 @@
                                 const json = JSON.parse(data);
                                 if (json.choices && json.choices[0] && json.choices[0].delta) {
                                     result += json.choices[0].delta.content || '';
-                                    outputEmail.innerHTML = result; // Use innerHTML to display as HTML
+                                    outputEmail.innerHTML = DOMPurify.sanitize(result); // Sanitize and display HTML content
                                     updateWordCount('outputEmail', 'outputWordCount');
                                 }
                             } catch (e) {
