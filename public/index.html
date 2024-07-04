@@ -56,6 +56,14 @@
         #outputContainer {
             position: relative;
         }
+        #outputEmail {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            height: 500px;
+            overflow-y: auto;
+        }
         #copyOverlay {
             position: absolute;
             top: 0;
@@ -106,7 +114,7 @@
         <div class="column">
             <div id="outputWordCount" class="word-count">Word count: 0</div>
             <div id="outputContainer">
-                <textarea id="outputEmail" readonly></textarea>
+                <div id="outputEmail"></div> <!-- Changed to div -->
                 <div id="copyOverlay">Click to copy</div>
                 <div class="spinner" id="spinner"></div> <!-- Add spinner element -->
             </div>
@@ -153,7 +161,7 @@
             }
 
             const outputEmail = document.getElementById('outputEmail');
-            outputEmail.value = ''; // Clear previous content
+            outputEmail.innerHTML = ''; // Clear previous content
 
             const spinner = document.getElementById('spinner');
             spinner.style.display = 'block'; // Show spinner
@@ -185,7 +193,7 @@
                                 const json = JSON.parse(data);
                                 if (json.choices && json.choices[0] && json.choices[0].delta) {
                                     result += json.choices[0].delta.content || '';
-                                    outputEmail.value = result;
+                                    outputEmail.innerHTML = result; // Use innerHTML to display as HTML
                                     updateWordCount('outputEmail', 'outputWordCount');
                                 }
                             } catch (e) {
@@ -196,7 +204,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                outputEmail.value = 'An error occurred while rewriting the email. Please try again.';
+                outputEmail.innerHTML = 'An error occurred while rewriting the email. Please try again.';
             }  finally {
                 spinner.style.display = 'none'; // Hide spinner when done
             }
@@ -217,7 +225,11 @@
             });
 
             outputContainer.addEventListener('click', () => {
-                outputEmail.select();
+                const range = document.createRange();
+                range.selectNodeContents(outputEmail);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
                 document.execCommand('copy');
                 copyOverlay.textContent = 'Copied!';
                 setTimeout(() => {

@@ -1,0 +1,46 @@
+<head>
+  <script src="https://cdn.tiny.cloud/1/zp1uxeq0alq99rzqsnnl16wivtbkg6k6c7wa1bz04dk6vd3w/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+</head>
+
+<script>
+  function getEmbeddedData(field) {
+    // Example embedded data value retrieval
+    // This function needs to be replaced with the actual implementation
+    // that fetches the embedded data field value in your context.
+    return "${e://Field/disable_copy_paste}";
+  }
+
+  // Get the value of disableCopyPaste
+  var disableCopyPaste = getEmbeddedData('disable_copy_paste');
+
+  // Configure TinyMCE
+  var tinymceConfig = {
+    selector: 'textarea',
+    plugins: ['lists', 'paste'],
+    paste_as_text: true,  // Force paste as plain text
+    toolbar: 'undo redo | bold italic underline | numlist bullist | paste',
+    tinycomments_mode: 'embedded',
+    tinycomments_author: 'Author name',
+    mergetags_list: [
+      { value: 'First.Name', title: 'First Name' },
+      { value: 'Email', title: 'Email' },
+    ],
+    ai_request: (request, respondWith) => respondWith.string(() => Promise.reject("See docs to implement AI Assistant")),
+    setup: function (editor) {
+      editor.on('paste', function (e) {
+        console.log('Pasting:', e);
+      });
+      if (disableCopyPaste === "1") {
+        editor.on('paste', function (e) {
+          console.log('Paste attempt detected and prevented.');
+          e.preventDefault();
+        });
+      }
+    }
+  };
+
+  // Initialize TinyMCE with the configured settings
+  tinymce.init(tinymceConfig);
+</script>
+
+<textarea></textarea>
