@@ -257,7 +257,7 @@
             const preexistingText = getText();
             if (preexistingText) {
                 const inputEmail = document.getElementById('inputEmail');
-                inputEmail.value = decodeURIComponent(preexistingText);
+                inputEmail.value = convertBrToNewline(decodeURIComponent(preexistingText));
                 updateWordCount('inputEmail', 'inputWordCount');
             }
 });
