@@ -261,7 +261,9 @@
                 updateWordCount('inputEmail', 'inputWordCount');
             }
 });
-
+function convertBrToNewline(text) {
+    return text.replace(/<br>/gi, '\n');
+}
     </script>
 </body>
 </html>
