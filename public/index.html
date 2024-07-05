@@ -141,6 +141,12 @@
             const params = new URLSearchParams(window.location.search);
             return params.get('disable_copy_paste');
         }
+
+        function getText() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('text');
+        }
+        
         
         function countWords(text) {
             return text.trim().split(/\s+/).length;
@@ -246,7 +252,16 @@
             if (isDisabled !== '1') {
                 addCopyFunctionality();
             }
-        });
+            
+               // Get the preexisting text and set it in the input box
+            const preexistingText = getText();
+            if (preexistingText) {
+                const inputEmail = document.getElementById('inputEmail');
+                inputEmail.value = decodeURIComponent(preexistingText);
+                updateWordCount('inputEmail', 'inputWordCount');
+            }
+});
+
     </script>
 </body>
 </html>
