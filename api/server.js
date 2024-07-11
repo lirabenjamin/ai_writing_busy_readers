@@ -53,7 +53,7 @@ app.post('/api/rewrite-email', async (req, res) => {
         return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const prompt = `Rewrite the following email to make it more professional and concise:\n\n${inputEmail}\n\nRewritten email:`;
+    const prompt = `${inputEmail}\n\nRewritten email:`;
 
     try {
         // const basePrompt = await readPromptFromFile('prompt.txt');
