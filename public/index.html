@@ -211,7 +211,8 @@
                     }
                 }
                  // Send the generated email to the parent window
-                window.parent.postMessage({ type: 'generatedEmail', email: result }, '*');
+                 const plainTextContent = outputEmail.textContent || outputEmail.innerText;
+                window.parent.postMessage({ type: 'generatedEmail', email: plainTextContent }, '*');
 
             } catch (error) {
                 console.error('Error:', error);
