@@ -211,7 +211,7 @@
                     }
                 }
                  // Send the generated email to the parent window
-                window.parent.postMessage({ type: 'generatedEmail', email: result }, '*');
+                window.parent.postMessage({ type: 'generatedEmail', email: outputEmail.innerHTML }, '*');
 
             } catch (error) {
                 console.error('Error:', error);
