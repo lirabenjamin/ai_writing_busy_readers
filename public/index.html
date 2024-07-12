@@ -210,9 +210,20 @@
                         }
                     }
                 }
+
+                // Function to remove outer HTML tags but keep inner formatting
+                function stripOuterHtml(html) {
+                    const div = document.createElement('div');
+                    div.innerHTML = html;
+                    return Array.from(div.childNodes)
+                        .map(node => node.nodeType === Node.ELEMENT_NODE ? node.innerHTML : node.textContent)
+                        .join('')
+                        .trim();
+                }
+
                  // Send the generated email to the parent window
-                 const plainTextContent = outputEmail.textContent || outputEmail.innerText;
-                window.parent.postMessage({ type: 'generatedEmail', email: plainTextContent }, '*');
+                 const strippedHtmlContent = stripOuterHtml(outputEmail.innerHTML);
+                 window.parent.postMessage({ type: 'generatedEmail', email: strippedHtmlContent }, '*');
 
             } catch (error) {
                 console.error('Error:', error);
