@@ -211,19 +211,47 @@
                     }
                 }
 
-                // Function to remove outer HTML tags but keep inner formatting
-                function stripOuterHtml(html) {
-                    const div = document.createElement('div');
-                    div.innerHTML = html;
-                    return Array.from(div.childNodes)
-                        .map(node => node.nodeType === Node.ELEMENT_NODE ? node.innerHTML : node.textContent)
-                        .join('')
-                        .trim();
-                }
+                 // Function to ensure consistent HTML structure
+        function formatHtmlContent(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
 
-                 // Send the generated email to the parent window
-                 const strippedHtmlContent = stripOuterHtml(outputEmail.innerHTML);
-                 window.parent.postMessage({ type: 'generatedEmail', email: strippedHtmlContent }, '*');
+            // Convert all top-level text nodes to paragraphs
+            Array.from(div.childNodes).forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                    const p = document.createElement('p');
+                    p.textContent = node.textContent.trim();
+                    node.parentNode.replaceChild(p, node);
+                }
+            });
+
+            // Ensure lists are properly structured
+            div.querySelectorAll('li').forEach(li => {
+                if (li.parentNode.tagName !== 'UL' && li.parentNode.tagName !== 'OL') {
+                    const ul = document.createElement('ul');
+                    li.parentNode.insertBefore(ul, li);
+                    ul.appendChild(li);
+                }
+            });
+
+            // Replace <br> tags with proper paragraph breaks
+            div.innerHTML = div.innerHTML.replace(/<br\s*\/?>/gi, '</p><p>');
+
+            // Cleanup empty paragraphs
+            div.querySelectorAll('p').forEach(p => {
+                if (!p.textContent.trim()) {
+                    p.parentNode.removeChild(p);
+                }
+            });
+
+            return div.innerHTML;
+        }
+
+        // Get the HTML content, formatted for consistency
+        const formattedHtmlContent = formatHtmlContent(outputEmail.innerHTML);
+        
+        // Send the generated email (with consistent HTML structure) to the parent window
+        window.parent.postMessage({ type: 'generatedEmail', email: formattedHtmlContent }, '*');
 
             } catch (error) {
                 console.error('Error:', error);
