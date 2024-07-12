@@ -210,6 +210,9 @@
                         }
                     }
                 }
+                 // Send the generated email to the parent window
+                window.parent.postMessage({ type: 'generatedEmail', email: result }, '*');
+
             } catch (error) {
                 console.error('Error:', error);
                 outputEmail.innerHTML = 'An error occurred while rewriting the email. Please try again.';
