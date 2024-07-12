@@ -211,7 +211,7 @@
                     }
                 }
                  // Send the generated email to the parent window
-                window.parent.postMessage({ type: 'generatedEmail', email: outputEmail.innerHTML }, '*');
+                window.parent.postMessage({ type: 'generatedEmail', email: extractBodyContent(result) }, '*');
 
             } catch (error) {
                 console.error('Error:', error);
@@ -221,6 +221,16 @@
             }
         }
 
+        // Function to extract email
+        function extractBodyContent(html) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+
+            var bodyContent = tempDiv.querySelector('body').innerHTML;
+            
+            return bodyContent;
+        }
+        
         // Function to add click-to-copy functionality
         function addCopyFunctionality() {
             const outputContainer = document.getElementById('outputContainer');
