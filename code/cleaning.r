@@ -1,6 +1,7 @@
 library(gt)
 library(mongolite)
 library(arrow)
+library(dotenv)
 
 rename_condition = function(data){
   data %>% 
@@ -43,7 +44,10 @@ data %>%
 data %>% count(condition)
 
 # dowload chatbot data
-mongo_conn <- mongo(db = "myFirstDatabase", collection = "emails", url = "mongodb+srv://vercel-admin-user:jAE3mmTRCLERUveC@ai-rewriter.3ysvfv2.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
+load_dot_env()
+# Get the MongoDB URI from the environment variable
+mongo_uri <- Sys.getenv("MONGODB_URI")
+mongo_conn <- mongo(db = "myFirstDatabase", collection = "emails", url = mongo_uri)
 ai_rewrites <- mongo_conn$find() %>% as_tibble()
 
 # get the base
