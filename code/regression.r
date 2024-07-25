@@ -9,6 +9,9 @@ add_color = function(plot){
 
 data = arrow::read_parquet("data/long_texts_with_ratings.parquet") 
 
+data = data %>% 
+  select(id:answer.clarity, flesch_kincaid, avg_words_per_sentence, n_words, condition, stage)
+
 # show non-unique records
 data %>% 
   group_by(id,stage) %>% 
@@ -32,7 +35,7 @@ data = data %>%
     `Readability Score` = flesch_kincaid,
     `Word Count` = n_words
   ) %>%
-  pivot_longer(`Readability Score`:WPS, names_to = "metric", values_to = "value") %>%
+  pivot_longer(`Readability Score`:`Word Count`, names_to = "metric", values_to = "value") %>%
   mutate(condition = case_match(condition, 
                                 1 ~ "Control",
                                 2 ~ "AI-as-usual",
@@ -119,19 +122,48 @@ lm_to_tibble = function(lm) {
   lm %>% emmeans::emmeans(., "condition") %>% summary() %>% as_tibble()
 }
 
-(lm_results_noz %>%  
+emmeans_base = data %>% 
+  filter(stage == "Pretest") %>%
+  group_by(metric) %>%
+  nest() %>%
+  mutate(lm = map(data, ~lm(value ~ 1, data = .x))) %>%
+  mutate(emmeans = map(lm, lm_to_tibble)) %>%
+  unnest(emmeans) %>%
+  select(-lm)
+
+emmeans_base = data %>% 
+  filter(stage == "Pretest") %>%
+  group_by(metric,stage) %>%
+  summarise(emmean = mean(value), SE = sd(value)/sqrt(n())) %>% 
+  expand_grid(condition = c("Control", "AI-as-usual", "AI-optimized"))
+
+emmeans_post= lm_results_noz %>%  
   mutate(emmeans = map(lm, lm_to_tibble)) %>% 
   unnest(emmeans) %>%
-  select(-lm) %>% 
+  select(-lm)
+
+emmeans = bind_rows(emmeans_base, emmeans_post)
+
+
+(emmeans %>% 
+  mutate(stage = factor(stage, levels = c("Pretest", "Practice", "Test"))) %>%
   ggplot(aes(stage, emmean, color = condition)) +
-  geom_point(position = position_dodge(width = .3)) +
-  geom_line(aes(group = condition), position = position_dodge(width = .3)) +
-  geom_errorbar(aes(ymin = emmean-SE, ymax = emmean + SE), width = .1,position = position_dodge(width = .3)) +
-  facet_grid(metric~., scales = "free") +
+  geom_point(
+    # position = position_dodge(width = .3)
+    ) +
+  geom_line(data = data, aes(group = id, y = value),
+  alpha = .1, 
+  # position = position_dodge(width = .3)
+  ) +
+  geom_line(aes(group = condition)) +
+  geom_errorbar(aes(ymin = emmean-SE, ymax = emmean + SE), width = .1,
+  # position = position_dodge(width = .3)
+  ) +
+  facet_grid(metric~condition, scales = "free") +
   labs(
        x = NULL,
        color = NULL,
        y = "Estimated marginal mean") +
   theme(legend.position = "bottom") ) %>% 
   add_color()
-ggsave("plots/emmeans_noz.png", width = 4, height = 8, dpi = 300)
+  ggsave("plots/emmeans_noz.png", width = 4, height = 8, dpi = 300)

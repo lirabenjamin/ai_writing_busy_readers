@@ -19,6 +19,9 @@ data = data %>% filter(day(StartDate) != 18) # Remove one testing day
 
 data = data %>% mutate(sample = ifelse(StartDate > "2024-07-19 07:32:41", 2,1))
 
+data = data %>% filter(Progress == 100)
+
+
 # data = data %>% filter(StartDate > "2024-07-19 07:32:41") # just round 2
 
 data %>% 
@@ -69,11 +72,43 @@ data %>%
 
 data %>% select(condition,nochange,rewrittenEmail) %>% filter(condition != 1)
 
+data  %>% select(id,pretest_rewritten,practice_rewritten,test_rewritten) %>% 
+  pivot_longer(cols = -id, names_to = "stage", values_to = "text")  %>% 
+  unique() %>% 
+  drop_na() %>% 
+  # assign a number id to each unique text
+  mutate(text_id = as.integer(factor(text)))  %>% 
+  arrow::write_parquet("data/texts_to_rate.parquet")
+
+# timing variables
+timing = data %>% 
+    filter(sample == 2) %>%
+  select(id,condition,sample, matches("Page")) %>% 
+  mutate(
+    learning_time = (`time_p1_Page Submit` + `time_p2_Page Submit`+ `time_p3_Page Submit`+ `time_p4_Page Submit`+ `time_p5_Page Submit`+ `time_p6_Page Submit`+ `time_pcompare_Page Submit`)/60,
+    test_time = `2_time_test_Page Submit`/60
+    ) %>% 
+    rowwise() %>%
+    mutate(practice_time = sum(c(`3_time_practice_c2_Page Submit`, `3_time_try1_Page Submit`, `3_time_ai_Page Submit`, `3_time_compare_Page Submit`,`3_time_try2_Page Submit` ),na.rm = T)/60) %>% 
+    select(id,condition, learning_time, practice_time, test_time) %>% 
+    ungroup()
+
+data = data %>% left_join(timing)
+
+data %>% colnames()
+
+# important variables
+clean = data %>% select(id,condition, sample, year_of_birth:writing_aireliance, learning_time, practice_time, test_time,ai_preference = `3_practice_preference`, ai_why = `3_practice_why`, cheat_1:cheat_5_TEXT, ai_helpfulness, effort_practice = Q120, effort_test = Q121, comments, practice_rewritten:pretest_rewritten)
+
 data %>% write_parquet("data/clean.parquet")
 
 long_texts = data %>%
-  select(id, condition, pretest_rewritten, practice_rewritten, test_rewritten, sample) %>% 
+  select(id, condition, pretest_rewritten, practice_rewritten,practice_rewritten2, test_rewritten, sample) %>% 
   pivot_longer(cols = -c(id, condition, sample), names_to = "stage", values_to = "text")
+
+data %>% 
+  filter(condition == 3) %>%
+  select(practice_rewritten, practice_rewritten2)
 
 long_texts %>% 
   filter(condition == 2, stage == "practice_rewritten") %>%
@@ -83,4 +118,4 @@ long_texts %>%
 arrow::write_parquet(long_texts, "data/long_texts.parquet")
 
 
-data
+data$practice_rewritten2
