@@ -7,24 +7,11 @@ add_color = function(plot){
   scale_fill_manual(values = c("Control" = "#2967b7", "AI-as-usual" = "#c01515", "AI-optimized" = "#4f9108"))
 }
 
-data = arrow::read_parquet("data/long_texts_with_ratings.parquet") 
 
-
-data = data %>% unique()
+data = arrow::read_parquet("data/long_texts_with_ratings_cleaned.parquet")
 
 data = data %>%
-  mutate(
-    answer.clarity = 8-answer.clarity,
-    avg_words_per_sentence = avg_words_per_sentence * -1,
-    n_words = n_words * -1
-    ) %>%
-  rename(
-    `Clarity` = answer.clarity, 
-    `WPS` = avg_words_per_sentence,
-    `Readability Score` = flesch_kincaid,
-    `Word Count` = n_words
-  ) %>%
-  pivot_longer(`Readability Score`:WPS, names_to = "metric", values_to = "value") %>%
+  pivot_longer(clarity:five_principles, names_to = "metric", values_to = "value") %>%
   mutate(condition = case_match(condition, 
                                 1 ~ "Control",
                                 2 ~ "AI-as-usual",
@@ -35,7 +22,12 @@ data = data %>%
                             "test_rewritten" ~ "Test")) %>%
   mutate(stage = factor(stage, levels = c("Pretest", "Practice", "Test")))
 
+clean = arrow::read_parquet("data/clean.parquet")
+data = clean %>% select(id,sample) %>% 
+  right_join(data)
+
 lm_results = data %>% 
+  filter(metric == "five_principles" & sample == 2) %>%
   select(id, condition, stage, metric, value, sample) %>%
   # make control the reference group
   mutate(condition = relevel(factor(condition), ref = "Control")) %>%
@@ -75,7 +67,8 @@ sim_data = function(n, pretest_mean, pretest_sd, beta_pretest, beta_AI_as_usual,
 }
 
 sims = params %>% 
-  expand_grid(n = c(300, 600, 900, 1200, 1500, 1800, 2100), sim = 1:500) %>% 
+  filter(metric %in% c("six_principles","clarity","five_principles")) %>%
+  expand_grid(n = c(30,60,90,150), sim = 1:500) %>% 
   mutate(sim_data = pmap(list(n, pretest_mean, pretest_sd, beta_pretest, beta_AI_as_usual, beta_AI_optimized, residual_variance), sim_data)) %>% 
   # make control the reference group
   mutate(sim_data = map(sim_data, ~mutate(.x, condition = relevel(factor(condition), ref = "Control"))) ) %>%
@@ -97,23 +90,26 @@ power %>%
   slice(1) %>% 
 
 
-(power %>% 
+power %>% 
+  filter(stage == "Test") %>%
   mutate(condition = case_match(term, 
                                 "conditionAI-as-usual" ~ "AI-as-usual",
                                 "conditionAI-optimized" ~ "AI-optimized")) %>%
   ungroup() %>% 
   ggplot(aes(n, power, color = condition)) +
   geom_line() +
-  facet_grid(stage~metric) +
-  scale_x_continuous(breaks = seq(0, 2100, 300)) +
+  facet_grid(stage~metric, scales = "free_x") +
+  # scale_x_continuous(breaks = unique(sims$n)) +
+  scale_x_continuous(breaks = c(30,60,90,150)) +
+  coord_cartesian(xlim = c(30,150)) +
   geom_vline(xintercept = 900, linetype = 2) +
   geom_point()+
-  geom_hline(yintercept = .8, linetype = 2) +
+  geom_hline(yintercept = c(.8,.9), linetype = 2) +
   labs(
     x = "Sample Size",
     y = "Power",
     color = NULL
-  )) %>%
-  add_color()
+  )
 ggsave("plots/power_sim.png", width = 12, height = 4, dpi = 300)
- 
+ggsave("plots/power_sim2.png", width = 7, height = 3, dpi = 300)
+ggsave("plots/power_sim3.png", width = 7, height = 3, dpi = 300)

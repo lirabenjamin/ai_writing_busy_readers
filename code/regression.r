@@ -1,59 +1,11 @@
 library(stargazer)
-library(arrow)
 
-add_color = function(plot){
-  plot + 
-  scale_color_manual(values = c("Control" = "#2967b7", "AI-as-usual" = "#c01515", "AI-optimized" = "#4f9108")) +
-  scale_fill_manual(values = c("Control" = "#2967b7", "AI-as-usual" = "#c01515", "AI-optimized" = "#4f9108"))
-}
-
-data = arrow::read_parquet("data/long_texts_with_ratings.parquet") 
-
-data = data %>% 
-  select(id:answer.clarity, flesch_kincaid, avg_words_per_sentence, n_words, condition, stage)
-
-# show non-unique records
-data %>% 
-  group_by(id,stage) %>% 
-  filter(n() > 1) %>% 
-  select(id, stage, condition) %>% 
-  distinct()
-
-data %>% filter(id == "R_1iU8Naqdssdja93")
-
-data = data %>% unique()
+data = arrow::read_parquet("data/long_texts_with_ratings_cleaned.parquet")
 
 data = data %>%
-  mutate(
-    answer.clarity = 8-answer.clarity,
-    avg_words_per_sentence = avg_words_per_sentence * -1,
-    n_words = n_words * -1
-    ) %>%
-  rename(
-    `Clarity` = answer.clarity, 
-    `WPS` = avg_words_per_sentence,
-    `Readability Score` = flesch_kincaid,
-    `Word Count` = n_words
-  ) %>%
-  pivot_longer(`Readability Score`:`Word Count`, names_to = "metric", values_to = "value") %>%
-  mutate(condition = case_match(condition, 
-                                1 ~ "Control",
-                                2 ~ "AI-as-usual",
-                                3 ~ "AI-optimized")) %>%
-  mutate(stage = case_match(stage, 
-                            "pretest_rewritten" ~ "Pretest",
-                            "practice_rewritten" ~ "Practice",
-                            "test_rewritten" ~ "Test")) %>%
-  mutate(stage = factor(stage, levels = c("Pretest", "Practice", "Test")))
+  pivot_longer(clarity:five_principles, names_to = "metric", values_to = "value")
 
-read_parquet("data/clean.parquet") %>% count(nochange,condition)
-
-data = data %>% 
-  left_join(read_parquet("data/clean.parquet") %>% select(id, nochange, sample))
-
-data %>% 
-  # make control the reference group
-  mutate(condition = relevel(factor(condition), ref = "Control")) %>%
+data %>%
   group_by(metric, stage) %>% 
   mutate(value = scale(value)) %>%
   # add the pretest values to the right of practice and test to
@@ -62,10 +14,13 @@ data %>%
   pull(lm) %>% 
   stargazer(star.cutoffs = c(0.05, 0.01, 0.001), type = "text")
 
+data = data  %>% 
+  left_join(read_parquet("data/clean.parquet") %>% select(id,sample))
+
 lm_results = data %>% 
   select(id, condition, stage, metric, value, sample) %>%
-  # make control the reference group
-  mutate(condition = relevel(factor(condition), ref = "Control")) %>%
+  factor_condition() %>%
+  factor_stage() %>%
   pivot_wider(names_from = stage, values_from = value) %>% 
   pivot_longer(Practice:Test, names_to = "stage", values_to = "value") %>% 
   group_by(stage,metric) %>%
@@ -92,20 +47,77 @@ lm_results = lm_results %>% mutate(
   beta_dif = map_dbl(lm, get_beta_dif)
 )
 
-lm_results %>%
+data %>% 
+  pivot_wider(names_from = metric, values_from = value) %>% 
+  bind_rows(
+    data %>% 
+      pivot_wider(names_from = metric, values_from = value) %>% 
+      mutate(stage = "all")
+      ) %>% 
+      group_by(stage) %>%
+      select(clarity:five_principles) %>%
+      nest() %>%
+      mutate(
+        cors = map(data, corrr::correlate),
+        cors = map(cors, corrr::stretch)
+        ) %>% 
+        unnest(cors) %>% 
+        mutate(x = fct_inorder(x), y = fct_inorder(y)) %>%
+        filter(x != y) %>%
+        ggplot(aes(x,y, fill = r)) +
+        geom_tile() +
+        geom_text(aes(label = Ben::numformat(r)), color = "white") +
+        facet_wrap(~stage) +
+        scale_fill_viridis_c() +
+        theme(
+          legend.position = "none",
+          axis.text.x = element_text(angle = 45, hjust = 1))+ 
+        labs(
+          x = NULL,
+          y = NULL,
+          fill = "Correlation"
+        )
+ggsave("plots/correlation_matrix.png", width = 8, height = 8, dpi = 300)
+
+lm_results$wald_p
+lm_results$beta_dif
+
+lm1 = lm_results %>% filter(stage == "Practice")
+lm2 = lm_results %>% filter(stage == "Test") 
+
+st1 = lm1 %>%
   pull(lm) %>%
   stargazer(
     star.cutoffs = c(0.05, 0.01, 0.001), 
-    type = "text", 
-    column.labels = lm_results$metric,
-    add.lines = list(c("Wald test", paste0("p = ", round(lm_results$wald_p, 3))),
-                     c("Beta difference", round(lm_results$beta_dif, 3))),
+    column.labels = lm1$metric,
+    add.lines = list(c("Wald test", paste0("p = ", round(lm1$wald_p, 3))),
+                     c("Beta difference", round(lm1$beta_dif, 3))),
     dep.var.caption  = "Practice and test scores regressed on condition and pretest scores",
     omit.stat = c("adj.rsq", "ser"),   # Example of omitting certain statistics
-          # omit.table.layout = "d",           # Omits dependent variable row
-    dep.var.labels.include = FALSE)
+    #       # omit.table.layout = "d",           # Omits dependent variable row
+    dep.var.labels.include = FALSE,
+    out = "tables/lm_results1.tex"
+    )
 
+st2 = lm2 %>%
+  pull(lm) %>%
+  stargazer(
+    star.cutoffs = c(0.05, 0.01, 0.001), 
+    column.labels = lm2$metric,
+    add.lines = list(c("Wald test", paste0("p = ", round(lm2$wald_p, 3))),
+                     c("Beta difference", round(lm2$beta_dif, 3))),
+    dep.var.caption  = "Practice and test scores regressed on condition and pretest scores",
+    omit.stat = c("adj.rsq", "ser"),   # Example of omitting certain statistics
+    #       # omit.table.layout = "d",           # Omits dependent variable row
+    dep.var.labels.include = FALSE
+    # save
+    # out = "tables/lm_results2.tex"
+    )
 
+table = starpolishr::star_panel(st1, st2, panel.names = c("Practice", "Test"), same.summary.stats = F)
+
+cat(table, file = "tables/lm_results.tex",sep = "\n")
+cat(st2, file = "tables/lm_results2.tex",sep = "\n")
 
 lm_results_noz = data %>% 
   select(id, condition, stage, metric, value) %>%
