@@ -141,6 +141,11 @@
             const params = new URLSearchParams(window.location.search);
             return params.get('disable_copy_paste');
         }
+        
+        function getAutodisplay() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('autodisplay');
+        }
 
         function getText() {
             const params = new URLSearchParams(window.location.search);
@@ -304,6 +309,13 @@
                 inputEmail.value = convertBrToNewline(decodeURIComponent(preexistingText));
                 updateWordCount('inputEmail', 'inputWordCount');
             }
+
+                // Autodisplay the rewritten email if the URL parameter is present
+            const autodisplay = getAutodisplay();
+            if (autodisplay === '1') {
+                rewriteEmail();
+            }
+        });
 });
 function convertBrToNewline(text) {
     return text.replace(/<br>/gi, '\n');
