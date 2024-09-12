@@ -128,7 +128,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const backendUrl = '/api/rewrite-email';
 
-        function rewriteEmail() {
+        async function rewriteEmail() {
             const inputEmail = document.getElementById('inputEmail').value;
 
             let userId = getUserId();
