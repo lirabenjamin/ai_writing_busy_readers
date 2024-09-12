@@ -285,8 +285,14 @@
             }
 
             const autodisplay = getAutodisplay();
-            if (autodisplay === '1') {
-                rewriteEmail();
+           if (autodisplay === '1') {
+                setTimeout(() => {
+                    if (document.getElementById('inputEmail').value) {
+                        rewriteEmail();
+                    } else {
+                        console.log('No input text available for autodisplay');
+                    }
+                }, 500); // 500ms delay
             }
         });
 
