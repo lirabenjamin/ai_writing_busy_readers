@@ -230,6 +230,39 @@
         }
 
         // Other supporting functions (getUserId, getDisable, getAutodisplay, etc.)
+
+        function getUserId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('userid');
+        }
+
+        function getDisable() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('disable_copy_paste');
+        }
+        
+        function getAutodisplay() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('autodisplay');
+        }
+
+        function getText() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('text');
+        }
+        
+        
+        function countWords(text) {
+            return text.trim().split(/\s+/).length;
+        }
+
+        function updateWordCount(inputId, countId) {
+            const text = document.getElementById(inputId).value;
+            const wordCount = countWords(text);
+            document.getElementById(countId).textContent = Word count: ${wordCount};
+        }
+
+        document.getElementById('inputEmail').addEventListener('input', () => updateWordCount('inputEmail', 'inputWordCount'));
         // Check embedded data to decide whether to add click-to-copy functionality
         const isDisabled = getDisable();
         if (isDisabled !== '1') {
