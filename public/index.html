@@ -79,7 +79,6 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
-        /* Spinner CSS */
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             border-left-color: #4CAF50;
@@ -93,18 +92,12 @@
             transform: translate(-50%, -50%);
             display: none;
         }
-
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.6/purify.min.js"></script>
-
 </head>
 <body>
     <div class="container">
@@ -116,17 +109,47 @@
         <div class="column">
             <div id="outputWordCount" class="word-count">Word count: 0</div>
             <div id="outputContainer">
-                <div id="outputEmail"></div> <!-- Changed to div -->
+                <div id="outputEmail"></div>
                 <div id="copyOverlay">Click to copy</div>
-                <div class="spinner" id="spinner"></div> <!-- Add spinner element -->
+                <div class="spinner" id="spinner"></div>
             </div>
         </div>
     </div>
-    
 
- <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    <script>
         const backendUrl = '/api/rewrite-email';
+
+        function getUserId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('userid');
+        }
+
+        function getDisable() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('disable_copy_paste');
+        }
+        
+        function getAutodisplay() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('autodisplay');
+        }
+
+        function getText() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('text');
+        }
+        
+        function countWords(text) {
+            return text.trim().split(/\s+/).length;
+        }
+
+        function updateWordCount(inputId, countId) {
+            const text = document.getElementById(inputId).value;
+            const wordCount = countWords(text);
+            document.getElementById(countId).textContent = `Word count: ${wordCount}`;
+        }
+
+        document.getElementById('inputEmail').addEventListener('input', () => updateWordCount('inputEmail', 'inputWordCount'));
 
         async function rewriteEmail() {
             const inputEmail = document.getElementById('inputEmail').value;
@@ -137,10 +160,10 @@
             }
 
             const outputEmail = document.getElementById('outputEmail');
-            outputEmail.innerHTML = ''; // Clear previous content
+            outputEmail.innerHTML = '';
 
             const spinner = document.getElementById('spinner');
-            spinner.style.display = 'block'; // Show spinner
+            spinner.style.display = 'block';
 
             try {
                 const response = await fetch(`${backendUrl}?userid=${userId}`, {
@@ -169,7 +192,7 @@
                                 const json = JSON.parse(data);
                                 if (json.choices && json.choices[0] && json.choices[0].delta) {
                                     result += json.choices[0].delta.content || '';
-                                    outputEmail.innerHTML = DOMPurify.sanitize(result); // Sanitize and display HTML content
+                                    outputEmail.innerHTML = DOMPurify.sanitize(result);
                                     updateWordCount('outputEmail', 'outputWordCount');
                                 }
                             } catch (e) {
@@ -179,110 +202,97 @@
                     }
                 }
 
-                // Function to ensure consistent HTML structure
-                function formatHtmlContent(html) {
-                    const div = document.createElement('div');
-                    div.innerHTML = html;
-
-                    // Convert all top-level text nodes to paragraphs
-                    Array.from(div.childNodes).forEach(node => {
-                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
-                            const p = document.createElement('p');
-                            p.textContent = node.textContent.trim();
-                            node.parentNode.replaceChild(p, node);
-                        }
-                    });
-
-                    // Ensure lists are properly structured
-                    div.querySelectorAll('li').forEach(li => {
-                        if (li.parentNode.tagName !== 'UL' && li.parentNode.tagName !== 'OL') {
-                            const ul = document.createElement('ul');
-                            li.parentNode.insertBefore(ul, li);
-                            ul.appendChild(li);
-                        }
-                    });
-
-                    // Replace <br> tags with proper paragraph breaks
-                    div.innerHTML = div.innerHTML.replace(/<br\s*\/?>/gi, '</p><p>');
-
-                    // Cleanup empty paragraphs
-                    div.querySelectorAll('p').forEach(p => {
-                        if (!p.textContent.trim()) {
-                            p.parentNode.removeChild(p);
-                        }
-                    });
-
-                    return div.innerHTML;
-                }
-
-                // Get the HTML content, formatted for consistency
                 const formattedHtmlContent = formatHtmlContent(outputEmail.innerHTML);
-
-                // Send the generated email (with consistent HTML structure) to the parent window
                 window.parent.postMessage({ type: 'generatedEmail', email: formattedHtmlContent }, '*');
 
             } catch (error) {
                 console.error('Error:', error);
                 outputEmail.innerHTML = 'An error occurred while rewriting the email. Please try again.';
             } finally {
-                spinner.style.display = 'none'; // Hide spinner when done
+                spinner.style.display = 'none';
             }
         }
 
-        // Other supporting functions (getUserId, getDisable, getAutodisplay, etc.)
+        function formatHtmlContent(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
 
-        function getUserId() {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('userid');
-        }
+            Array.from(div.childNodes).forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                    const p = document.createElement('p');
+                    p.textContent = node.textContent.trim();
+                    node.parentNode.replaceChild(p, node);
+                }
+            });
 
-        function getDisable() {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('disable_copy_paste');
-        }
-        
-        function getAutodisplay() {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('autodisplay');
-        }
+            div.querySelectorAll('li').forEach(li => {
+                if (li.parentNode.tagName !== 'UL' && li.parentNode.tagName !== 'OL') {
+                    const ul = document.createElement('ul');
+                    li.parentNode.insertBefore(ul, li);
+                    ul.appendChild(li);
+                }
+            });
 
-        function getText() {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('text');
-        }
-        
-        
-        function countWords(text) {
-            return text.trim().split(/\s+/).length;
-        }
+            div.innerHTML = div.innerHTML.replace(/<br\s*\/?>/gi, '</p><p>');
 
-        function updateWordCount(inputId, countId) {
-            const text = document.getElementById(inputId).value;
-            const wordCount = countWords(text);
-            document.getElementById(countId).textContent = Word count: ${wordCount};
+            div.querySelectorAll('p').forEach(p => {
+                if (!p.textContent.trim()) {
+                    p.parentNode.removeChild(p);
+                }
+            });
+
+            return div.innerHTML;
         }
 
-        document.getElementById('inputEmail').addEventListener('input', () => updateWordCount('inputEmail', 'inputWordCount'));
-        // Check embedded data to decide whether to add click-to-copy functionality
-        const isDisabled = getDisable();
-        if (isDisabled !== '1') {
-            addCopyFunctionality();
+        function addCopyFunctionality() {
+            const outputContainer = document.getElementById('outputContainer');
+            const copyOverlay = document.getElementById('copyOverlay');
+            const outputEmail = document.getElementById('outputEmail');
+
+            outputContainer.addEventListener('mouseenter', () => {
+                copyOverlay.style.opacity = '1';
+            });
+
+            outputContainer.addEventListener('mouseleave', () => {
+                copyOverlay.style.opacity = '0';
+            });
+
+            outputContainer.addEventListener('click', () => {
+                const range = document.createRange();
+                range.selectNodeContents(outputEmail);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                document.execCommand('copy');
+                copyOverlay.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyOverlay.textContent = 'Click to copy';
+                }, 1500);
+            });
         }
 
-        // Get the preexisting text and set it in the input box
-        const preexistingText = getText();
-        if (preexistingText) {
-            const inputEmail = document.getElementById('inputEmail');
-            inputEmail.value = convertBrToNewline(decodeURIComponent(preexistingText));
-            updateWordCount('inputEmail', 'inputWordCount');
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const isDisabled = getDisable();
+            if (isDisabled !== '1') {
+                addCopyFunctionality();
+            }
+            
+            const preexistingText = getText();
+            if (preexistingText) {
+                const inputEmail = document.getElementById('inputEmail');
+                inputEmail.value = convertBrToNewline(decodeURIComponent(preexistingText));
+                updateWordCount('inputEmail', 'inputWordCount');
+            }
 
-        // Autodisplay the rewritten email if the URL parameter is present
-        const autodisplay = getAutodisplay();
-        if (autodisplay === '1') {
-            rewriteEmail();
+            const autodisplay = getAutodisplay();
+            if (autodisplay === '1') {
+                rewriteEmail();
+            }
+        });
+
+        function convertBrToNewline(text) {
+            return text.replace(/<br>/gi, '\n');
         }
-    });
-</script>
+    </script>
 </body>
 </html>
