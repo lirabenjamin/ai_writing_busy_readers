@@ -119,6 +119,12 @@
     <script>
         const backendUrl = '/api/rewrite-email';
 
+        // Function to change the text of the button
+        function updateButtonText(newText) {
+            const button = document.getElementById('rewriteEmailButton');
+            button.textContent = newText; // Set the new button text
+        }
+
         function getUserId() {
             const params = new URLSearchParams(window.location.search);
             return params.get('userid');
@@ -138,6 +144,12 @@
             const params = new URLSearchParams(window.location.search);
             return params.get('text');
         }
+
+        function getExample() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('example');
+        }
+        
         
         function countWords(text) {
             return text.trim().split(/\s+/).length;
@@ -276,6 +288,11 @@
             if (isDisabled !== '1') {
                 addCopyFunctionality();
             }
+
+            
+            const isExample = getExample();
+            if (isExample === '1') {
+                updateButtonText('Show me an outstanding example');
             
             const preexistingText = getText();
             if (preexistingText) {
