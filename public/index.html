@@ -189,17 +189,22 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let result = '';
+                let streamComplete = false;
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
+                    
                     const chunk = decoder.decode(value, { stream: true });
                     const lines = chunk.split('\n');
 
                     for (let line of lines) {
                         if (line.trim().startsWith('data: ')) {
                             const data = line.replace(/^data: /, '');
-                            if (data === '[DONE]') break;
+                            if (data === '[DONE]') {
+                                streamComplete = true;
+                                break; // Break out of the for loop
+                            }
                             try {
                                 const json = JSON.parse(data);
                                 if (json.choices && json.choices[0] && json.choices[0].delta) {
@@ -212,6 +217,9 @@
                             }
                         }
                     }
+                    
+                    // Break out of the while loop if we received [DONE]
+                    if (streamComplete) break;
                 }
 
                 const formattedHtmlContent = formatHtmlContent(outputEmail.innerHTML);
